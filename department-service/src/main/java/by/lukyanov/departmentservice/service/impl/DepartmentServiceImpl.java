@@ -4,16 +4,15 @@ import by.lukyanov.departmentservice.exception.DepartmentNotEmptyException;
 import by.lukyanov.departmentservice.model.Department;
 import by.lukyanov.departmentservice.repository.DepartmentRepository;
 import by.lukyanov.departmentservice.service.DepartmentService;
+import by.lukyanov.departmentservice.service.client.UserApiClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.List;
-import java.util.Objects;
 
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -24,7 +23,7 @@ import static java.util.Objects.requireNonNull;
 public class DepartmentServiceImpl implements DepartmentService {
 
     private final DepartmentRepository departmentRepository;
-    private final RestTemplate restTemplate;
+    private final UserApiClient userApiClient;
 
     @Override
     public Department create(Department department) {
@@ -54,7 +53,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     @Transactional
     public void deleteById(Long id) {
         Department department = findById(requireNonNull(id));
-        Boolean exist = restTemplate.getForObject("http://localhost:8082/api/users/exist-in-department/" + id, Boolean.class);
+        Boolean exist = userApiClient.isUserInDepartment(id);
         if(nonNull(exist) && exist){
             log.info("Can not delete department with users");
             throw new DepartmentNotEmptyException("Can not delete department with users");
