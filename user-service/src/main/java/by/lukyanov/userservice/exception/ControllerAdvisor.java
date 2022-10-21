@@ -19,8 +19,8 @@ public class ControllerAdvisor extends ResponseEntityExceptionHandler {
         response.sendError(HttpStatus.NOT_FOUND.value());
     }
 
-    @ExceptionHandler(UnsuccessfulResponseException.class)
-    public void handleUnsuccessfulResponse(UnsuccessfulResponseException ex, HttpServletResponse response) throws IOException {
+    @ExceptionHandler(ExternalApiException.class)
+    public void handleUnsuccessfulResponse(ExternalApiException ex, HttpServletResponse response) throws IOException {
         response.sendError(ex.getStatus().value(), ex.getMessage());
     }
 }
