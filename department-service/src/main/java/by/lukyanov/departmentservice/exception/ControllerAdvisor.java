@@ -24,5 +24,9 @@ public class ControllerAdvisor extends ResponseEntityExceptionHandler {
         response.sendError(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
     }
 
-
+    @ExceptionHandler(ExternalApiException.class)
+    public void handleExternalApiException(ExternalApiException ex, HttpServletResponse response) throws IOException {
+        log.info(String.valueOf(ex.getStatusCode()));
+        response.sendError(ex.getStatusCode(), ex.getMessage());
+    }
 }

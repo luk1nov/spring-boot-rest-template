@@ -3,19 +3,18 @@ package by.lukyanov.userservice.service.impl;
 import by.lukyanov.userservice.dto.DepartmentDto;
 import by.lukyanov.userservice.dto.ResponseDto;
 import by.lukyanov.userservice.dto.UserDto;
-import by.lukyanov.userservice.exception.UnsuccessfulResponseException;
+import by.lukyanov.userservice.exception.ExternalApiException;
 import by.lukyanov.userservice.mapper.UserMapper;
 import by.lukyanov.userservice.model.User;
 import by.lukyanov.userservice.repository.UserRepository;
+import by.lukyanov.userservice.service.client.DepartmentApiClient;
 import by.lukyanov.userservice.service.UserService;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.List;
@@ -26,27 +25,21 @@ import static java.util.Objects.requireNonNull;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
-    private final RestTemplate restTemplate;
+    private final DepartmentApiClient departmentApiClient;
     private final UserMapper userMapper;
-
-    @Autowired
-    public UserServiceImpl(UserRepository userRepository, RestTemplate restTemplate, UserMapper userMapper) {
-        this.userRepository = userRepository;
-        this.restTemplate = restTemplate;
-        this.userMapper = userMapper;
-    }
 
     @Override
     public UserDto create(UserDto user) {
-        ResponseEntity<DepartmentDto> departmentResponse = retrieveDepartment(user.getDepartmentId());
-        if(departmentResponse.getStatusCode().is2xxSuccessful()){
+        DepartmentDto departmentDto = departmentApiClient.getDepartmentById(user.getDepartmentId());
+        if(departmentDto != null){
             return userMapper.userToDto(userRepository.save(userMapper.dtoToUser(requireNonNull(user))));
         } else {
             log.info("Department service didn't return successful response");
-            throw new UnsuccessfulResponseException(departmentResponse.getStatusCode(),
+            throw new ExternalApiException(HttpStatus.NOT_FOUND,
                     "Department with specified ID not found. Can not create user entity");
         }
     }
@@ -55,12 +48,12 @@ public class UserServiceImpl implements UserService {
     @Transactional(propagation = Propagation.SUPPORTS)
     public ResponseDto findByIdWithFullInfo(Long id) {
         User user = userRepository.findById(requireNonNull(id)).orElseThrow(EntityNotFoundException::new);
-        ResponseEntity<DepartmentDto> departmentResponse = retrieveDepartment(user.getDepartmentId());
-        if(departmentResponse.getStatusCode().is2xxSuccessful()){
-            return new ResponseDto(departmentResponse.getBody(), userMapper.userToDto(user));
+        DepartmentDto departmentDto = departmentApiClient.getDepartmentById(user.getDepartmentId());
+        if(departmentDto != null){
+            return new ResponseDto(departmentDto, userMapper.userToDto(user));
         } else {
             log.info("Department service didn't return successful response");
-            throw new UnsuccessfulResponseException(departmentResponse.getStatusCode(),
+            throw new ExternalApiException(HttpStatus.NOT_FOUND,
                     "Can not find user by id cause department service didn't return successful response");
         }
     }
@@ -103,14 +96,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto findByEmail(String code) {
         return userMapper.userToDto(userRepository.findByEmail(code).orElseThrow(EntityNotFoundException::new));
-    }
-
-    private ResponseEntity<DepartmentDto> retrieveDepartment(Long id){
-        ResponseEntity<DepartmentDto> departmentResponse = restTemplate
-                .getForEntity("http://localhost:8081/api/departments/" + id,
-                        DepartmentDto.class);
-        log.info(departmentResponse.getStatusCode().name());
-        return departmentResponse;
     }
 
     private UserDto setUserProperties(UserDto existed, UserDto updated){
