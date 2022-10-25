@@ -3,12 +3,10 @@ package by.lukyanov.departmentservice.controller;
 import by.lukyanov.departmentservice.model.Department;
 import by.lukyanov.departmentservice.service.DepartmentService;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
 
 import static java.util.Objects.nonNull;
 
